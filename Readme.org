@@ -1,0 +1,36 @@
+#+title: Readme
+- Use --help on the compiled binaries if you need explanations [sudo make comp].
+- Also read the bash code in the ./Scripts directory if planning to actually use this garbage (cause it is written in a way I like to use it, which might not suit you). Feel free to rewrite if wanted.
+** General idea
+- There are 3 components to the security aspect of the password manager: "hashed .csv file", "set of wordlists", "dehasher that can use both components to restore the initial .csv"
+  - Any device should not contain all 3 in it's storage at any time
+* Additional TODOs
+1. TODO Try to add any different method of encryption beside SHA1
+2. TODO Make wordlists less human-readable
+   - Make wordlists delimeted by same criteria as .csv file, but make the text being broken by newlines for a matrix look?
+3. TODO REFACTOR Make args.c more readable
+* EBNF, to parse .csv more elegantly
+** CSV rules
+1. Each entry is separated by a delimeter (,)
+2. Line terminates with line terminator "\n"
+   1. Terminator is optional at the last line
+3. OPTIONAL File can start with a header, but in no way it can be determined with the format
+4. OPTIONAL Each record (line) should have the same number of fields
+5. A field containing the a (,), (") or (\n) character should be enclosed in double quotes (")
+   - Any field may be enclosed in double quotes
+6. If a field is enclosed in double quotes, then a double quote embedded in the field must be represented by a sequence of two double quotes
+** EBNF notation of a CSV file
+- <CSV-file> ::= {<CSV-line>} <CSV-last-line>
+- <CSV-line> ::= [<CSV-entry>] {,<CSV-entry>} \n
+- <CSV-last-line> ::= [<CSV-entry>] {,<CSV-entry>} [\n]
+- <CSV-entry> ::= <String> | " <String> & ( \n | "" | , ) "
+** Parsing plan - only recording of relational positions, no strcpy-s
+- Read the buffer
+- By looping over the file: parse all lines
+  - Sequentially search for "\n", if there is a combination of ",\"" - scan and skip all \n inside until "\","
+  - Terminate on "\0"
+  - Number of lines is height of the file
+- By looping over the lines positions: parse all entries
+  - Sequentially search for ",", if the next thing is a ","" - scan and skip all "," and "\"" until ",\""
+  - Terminae on length of the line
+  - Number of saved entries is the width of the file
