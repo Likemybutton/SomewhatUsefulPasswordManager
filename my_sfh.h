@@ -481,6 +481,8 @@ COLUMNS_EXCEED_LIMIT_CSV_MAP_CONSTRUCTOR};
 extern const char* CsvMapConstructorErrorMessages[];
 exitCode CsvMapConstructor(CsvMap* csvMap, const char* csvBuffer,
                            const MAX_CSV_BUFFER_SIZE_ITER_TYPE csvBufferSize);
+bool8 cellContentsShouldBeEncasedInSecondDegreeDelimitation(
+    const char* cellContents, const MAX_CSV_CELL_CONTENT_SIZE_ITER_TYPE cellContentsSize);
 exitCode CsvMapDestructor(CsvMap* csvMap);
 exitCode fprintfCsvMap(FILE* csvFilePointer, const CsvMap* csvMap);
 exitCode printCsvMapDebug(const CsvMap* csvMap);
@@ -667,6 +669,19 @@ exitCode CsvMapConstructor(CsvMap* csvMap, const char* csvBuffer,
         return COLUMNS_EXCEED_LIMIT_CSV_MAP_CONSTRUCTOR;
     }
     return NO_ERROR_CSV_MAP_CONSTRUCTOR;
+}
+bool8 cellContentsShouldBeEncasedInSecondDegreeDelimitation(
+    const char* cellContents, const MAX_CSV_CELL_CONTENT_SIZE_ITER_TYPE cellContentsSize){
+    if(strchr(cellContents, CSV_FIRST_DEGREE_DELIMETER) != NULL){
+        return TRUE;
+    }
+    if(strchr(cellContents, CSV_SECOND_DEGREE_DELIMETER) != NULL){
+        return TRUE;
+    }
+    if(strchr(cellContents, CSV_NEWLINE_DELIMETER) != NULL){
+        return TRUE;
+    }
+    return FALSE;
 }
 exitCode CsvMapDestructor(CsvMap* csvMap){
     free(csvMap->csvBuffer);

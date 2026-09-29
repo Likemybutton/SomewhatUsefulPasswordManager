@@ -3,8 +3,39 @@
 #include <openssl/bio.h>
 #define ITERATION_PKCS5_PBKDF2_HMAC_SHA1 1
 #define DEFAULT_HASH_STRING_LENGTH_PKCS5_PBKDF2_HMAC_SHA1 DEFAULT_HASH_OCTET_LENGTH_PKCS5_PBKDF2_HMAC_SHA1 * 2
+typedef struct{
+    char* cellContents;
+    MAX_CSV_CELL_CONTENT_SIZE_ITER_TYPE cellContentsSize;
+    bool8 encasedInSecondDegreeDelimeter;
+}DehashedCell;
+exitCode DehashedCellDefaultConstructor(DehashedCell* cell){
+    cell->cellContents = (char*)malloc(MAX_CSV_CELL_CONTENT_SIZE*sizeof(char));
+    cell->cellContentsSize = 0;
+    cell->encasedInSecondDegreeDelimeter = 0;
+    return 0;
+}
+exitCode fillDehashedCell(
+    DehashedCell* cell, const char* cellContentsFill,
+    const MAX_CSV_CELL_CONTENT_SIZE_ITER_TYPE cellContentsSizeFill,
+    const bool8 encasedInSecondDegreeDelimeterFill){
+    cell->cellContentsSize = cellContentsSizeFill;
+    strncpy(cell->cellContents, cellContentsFill, cell->cellContentsSize);
+    cell->encasedInSecondDegreeDelimeter = encasedInSecondDegreeDelimeterFill;
+    return 0;
+}
+exitCode printDehashedCell(const DehashedCell* cell){
+    printf("%.*s - %d\n", cell->cellContentsSize, cell->cellContents,
+           cell->encasedInSecondDegreeDelimeter);
+    return 0;
+}
+exitCode DehashedCellDestructor(DehashedCell* cell){
+    free(cell->cellContents);
+    cell->cellContentsSize = 0;
+    cell->encasedInSecondDegreeDelimeter = 0;
+    return 0;
+}
 MAX_WORDLIST_FILE_BUFFER_SIZE_ITER_TYPE findMatchingWordFromWordlistBufferAndFill(
-    char* ans, const MAX_CSV_CELL_CONTENT_SIZE_ITER_TYPE ansSize,
+    DehashedCell* ans, const MAX_CSV_CELL_CONTENT_SIZE_ITER_TYPE maxAnsContentsSize,
     const char* src, const MAX_CSV_CELL_CONTENT_SIZE_ITER_TYPE srcSize,
     const char* wordlistBuffer,
     const MAX_WORDLIST_FILE_BUFFER_SIZE_ITER_TYPE worlistIteration,
@@ -31,10 +62,12 @@ MAX_WORDLIST_FILE_BUFFER_SIZE_ITER_TYPE findMatchingWordFromWordlistBufferAndFil
         }
         bufferCounter += (MAX_WORDLIST_FILE_BUFFER_SIZE_ITER_TYPE)lineStringSize + 1;
         if(strncmp(hashtempChars, src, hashtempCharsSize) == 0){
-            failCond(lineStringSize >= ansSize,
+            failCond(lineStringSize >= maxAnsContentsSize,
                      "Failure on copying during dehashing");
-            strncpy(ans, lineString, lineStringSize);
-            ans[lineStringSize] = '\0';
+            fillDehashedCell(
+                ans, lineString, lineStringSize,
+                cellContentsShouldBeEncasedInSecondDegreeDelimitation(
+                    lineString, lineStringSize));
             return bufferCounter;
         }        
         lineString = strtok(NULL, WORDLIST_DELIMETER);
@@ -44,7 +77,7 @@ MAX_WORDLIST_FILE_BUFFER_SIZE_ITER_TYPE findMatchingWordFromWordlistBufferAndFil
     free(strdupTemp);
     return bufferCounter;
 }
-exitCode getDehashedValues(char** dehashedColumnTemp,
+exitCode getDehashedValues(DehashedCell* dehashedColumnTemp,
                            const CsvMap* csvMap, const UserInput* args){
     FILE* wordlistPointer = fopen(args->wordlistPath, "r");
     char* wordlistBuffer = (char*)malloc(MAX_WORDLIST_FILE_BUFFER_SIZE*sizeof(char));
@@ -54,13 +87,16 @@ exitCode getDehashedValues(char** dehashedColumnTemp,
                                    MAX_WORDLIST_FILE_BUFFER_SIZE,
                                    wordlistPointer);
     fclose(wordlistPointer);
-    strncpy(dehashedColumnTemp[CSV_HEADER_ROW_POSITION],
-            args->dehashedCsvColumnHeaderName, args->dehashedCsvColumnHeaderNameSize);
-    dehashedColumnTemp[CSV_HEADER_ROW_POSITION][args->dehashedCsvColumnHeaderNameSize] = '\0';
+    fillDehashedCell(&(dehashedColumnTemp[CSV_HEADER_ROW_POSITION]),
+                     args->dehashedCsvColumnHeaderName,
+                     args->dehashedCsvColumnHeaderNameSize,
+                     cellContentsShouldBeEncasedInSecondDegreeDelimitation(
+                         args->dehashedCsvColumnHeaderName,
+                         args->dehashedCsvColumnHeaderNameSize));
     MAX_WORDLIST_FILE_BUFFER_SIZE_ITER_TYPE bufferCounter = 0;
     for(MAX_CSV_LENGTH_ITER_TYPE i=CSV_FIRST_DATA_ROW_POSITION; i<csvMap->rowsNumber; i++){
         bufferCounter = findMatchingWordFromWordlistBufferAndFill(
-            dehashedColumnTemp[i], MAX_CSV_CELL_CONTENT_SIZE,
+            &(dehashedColumnTemp[i]), MAX_CSV_CELL_CONTENT_SIZE,
             &(csvMap->csvBuffer[csvMap->cells[i][args->hashedCsvColumnIndex].cellStringStartPosition]),
             csvMap->cells[i][args->hashedCsvColumnIndex].cellStringEndPosition
             - csvMap->cells[i][args->hashedCsvColumnIndex].cellStringStartPosition,

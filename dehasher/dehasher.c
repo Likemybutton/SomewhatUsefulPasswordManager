@@ -6,7 +6,7 @@
 #include "args.c"
 #include "dehashing.c"
 exitCode writeDehashedColumn(FILE* csvFilePointer, const CsvMap* csvMap,
-                             char** dehashCol, const UserInput* args){    
+                             DehashedCell* dehashCol, const UserInput* args){    
     if(args->hashedCsvColumnIndex == 0){
         fprintf(csvFilePointer, "%.*s", args->dehashedCsvColumnHeaderNameSize, args->dehashedCsvColumnHeaderName);
     }
@@ -26,8 +26,12 @@ exitCode writeDehashedColumn(FILE* csvFilePointer, const CsvMap* csvMap,
     
     for(MAX_CSV_LENGTH_ITER_TYPE i=1; i<csvMap->rowsNumber; i++){
         if(args->hashedCsvColumnIndex == 0){
-            fprintf(csvFilePointer, "%s",
-                    dehashCol[i]);
+            if(dehashCol[i].encasedInSecondDegreeDelimeter == TRUE){
+                fprintf(csvFilePointer, "\"%.*s\"", dehashCol[i].cellContentsSize, dehashCol[i].cellContents);
+            }
+            else{
+                fprintf(csvFilePointer, "%.*s", dehashCol[i].cellContentsSize, dehashCol[i].cellContents);
+            }
         }
         else{
             fprintfCellContents(csvFilePointer, &(csvMap->cells[i][0]), csvMap->csvBuffer);
@@ -35,8 +39,15 @@ exitCode writeDehashedColumn(FILE* csvFilePointer, const CsvMap* csvMap,
         for(MAX_CSV_WIDTH_ITER_TYPE j=1; j<csvMap->widestRowSize; j++){
             fprintfDelimitation(csvFilePointer, &(csvMap->cells[i][j]));
             if(args->hashedCsvColumnIndex == j){
-                fprintf(csvFilePointer, "%s",
-                        dehashCol[i]);
+                if(dehashCol[i].encasedInSecondDegreeDelimeter == TRUE){
+                    fprintf(csvFilePointer, "\"%.*s\"",
+                            dehashCol[i].cellContentsSize,
+                          dehashCol[i].cellContents);
+                }
+                else{
+                    fprintf(csvFilePointer, "%.*s", dehashCol[i].cellContentsSize,
+                            dehashCol[i].cellContents);
+                }
             }
             else{
                 fprintfCellContents(csvFilePointer, &(csvMap->cells[i][j]), csvMap->csvBuffer);
@@ -46,7 +57,8 @@ exitCode writeDehashedColumn(FILE* csvFilePointer, const CsvMap* csvMap,
     }
     return 0;
 }
-exitCode printFileDehashedColumn(const CsvMap* csvMap, char** dehashCol, const UserInput* args){    
+exitCode printDehashedColumn(const CsvMap* csvMap, DehashedCell* dehashCol,
+                             const UserInput* args){    
     if(args->hashedCsvColumnIndex == 0){
         printf("%.*s", args->dehashedCsvColumnHeaderNameSize, args->dehashedCsvColumnHeaderName);
     }
@@ -66,8 +78,12 @@ exitCode printFileDehashedColumn(const CsvMap* csvMap, char** dehashCol, const U
     
     for(MAX_CSV_LENGTH_ITER_TYPE i=1; i<csvMap->rowsNumber; i++){
         if(args->hashedCsvColumnIndex == 0){
-            printf("%s",
-                    dehashCol[i]);
+            if(dehashCol[i].encasedInSecondDegreeDelimeter == TRUE){
+                printf("\"%.*s\"", dehashCol[i].cellContentsSize, dehashCol[i].cellContents);
+            }
+            else{
+                printf("%.*s", dehashCol[i].cellContentsSize, dehashCol[i].cellContents);
+            }
         }
         /* else{ */
         /*     printfCellContents(&(csvMap->cells[i][0]), csvMap->csvBuffer); */
@@ -75,8 +91,12 @@ exitCode printFileDehashedColumn(const CsvMap* csvMap, char** dehashCol, const U
         for(MAX_CSV_WIDTH_ITER_TYPE j=1; j<csvMap->widestRowSize; j++){
             //printfDelimitation(&(csvMap->cells[i][j]));
             if(args->hashedCsvColumnIndex == j){
-                printf("%s",
-                        dehashCol[i]);
+                if(dehashCol[i].encasedInSecondDegreeDelimeter == TRUE){
+                    printf("\"%.*s\"", dehashCol[i].cellContentsSize, dehashCol[i].cellContents);
+                }
+                else{
+                  printf("%.*s", dehashCol[i].cellContentsSize, dehashCol[i].cellContents);
+                }
             }
             /* else{ */
             /*     printfCellContents(&(csvMap->cells[i][j]), csvMap->csvBuffer); */
@@ -102,9 +122,9 @@ int main (const int argc, char** argv) {
     free(userHashedCsvBuffer);
     failCond(CsvMapConstructorErr,CsvMapConstructorErrorMessages[CsvMapConstructorErr]);
 
-    char** dehashedColumnTemp = (char**)malloc(csvMap.rowsNumber*sizeof(char*));
+    DehashedCell* dehashedColumnTemp = (DehashedCell*)malloc(csvMap.rowsNumber*sizeof(DehashedCell));
     for(MAX_CSV_LENGTH_ITER_TYPE i=0; i<csvMap.rowsNumber; i++){
-        dehashedColumnTemp[i] = (char*)malloc(MAX_CSV_CELL_CONTENT_SIZE*sizeof(char));
+        DehashedCellDefaultConstructor(&dehashedColumnTemp[i]);
     }
     getDehashedValues(dehashedColumnTemp, &csvMap, &args);
     
@@ -116,7 +136,7 @@ int main (const int argc, char** argv) {
         fclose(hashedCsvFilePointer);
     }
     else{
-        printFileDehashedColumn(&csvMap, dehashedColumnTemp, &args);
+        printDehashedColumn(&csvMap, dehashedColumnTemp, &args);
     }
     
     CsvMapDestructor(&csvMap);

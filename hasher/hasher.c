@@ -35,13 +35,14 @@ exitCode writeHashedColumn(FILE* csvFilePointer, const CsvMap* csvMap,
             fprintfCellContents(csvFilePointer, &(csvMap->cells[i][0]), csvMap->csvBuffer);
         }
         for(MAX_CSV_WIDTH_ITER_TYPE j=1; j<csvMap->widestRowSize; j++){
-            fprintfDelimitation(csvFilePointer, &(csvMap->cells[i][j]));
             if(args->userCsvColumnIndex == j){
+                fprintf(csvFilePointer, "%s", ",");
                 fprintf(csvFilePointer, "%.*s",
                         hashCol[i-CSV_FIRST_DATA_ROW_POSITION].csvCellContentsHashedSize,
                         hashCol[i-CSV_FIRST_DATA_ROW_POSITION].csvCellContentsHashed);
             }
             else{
+                fprintfDelimitation(csvFilePointer, &(csvMap->cells[i][j]));
                 fprintfCellContents(csvFilePointer, &(csvMap->cells[i][j]), csvMap->csvBuffer);
             }
         }
